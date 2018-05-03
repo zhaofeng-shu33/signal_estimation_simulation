@@ -1,0 +1,106 @@
+\documentclass{ctexart}
+\usepackage{bm}
+\usepackage{amssymb,amsmath}
+\usepackage{xparse}
+\usepackage{esdiff}
+\usepackage{xcolor}
+\def\E{\mathbb{E}}
+\NewDocumentCommand{\Cov}{o}{\textbf{V}_{#1}}
+\def\Var{\textrm{Var}}
+\begin{document}
+\title{统计信号处理参数估计仿真大作业}
+\author{赵丰}
+\maketitle
+\section{离散情形下的仿真}
+\subsection{模型}
+设观测模型为$\bm{z} = \bm{C} \bm{\theta} + \bm{n}$, 其中 $\theta$ 与 $n$ 相互独立均服从高斯分布。
+且已知$\bm{\theta}$ 和$\bm{n}$的均值为： $\E[\bm{\theta}] = \bm{\mu}_{\bm{\theta}}, \E[\bm{n}] = \bm{0}$,
+协方差矩阵为$\bm{V}_{\bm{\theta}}, \Cov[\bm{n}]=\bm{R}_{\bm{n}}$
+从而可求出$\bm{z}$ 的均值和方差：$\bm{\mu}_{\bm{z}} = \bm{C}\bm{\mu}_{\bm{\theta}},$
+$\Cov[\bm{z}] = \bm{C}\Cov[\bm{\theta}]\bm{C}^T + \Cov[\bm{n}]$.
+\subsection{估值方法}
+我们使用以下三种方法对模型参数$\bm{\theta}$ 进行\textbf{无偏}估值：
+\begin{enumerate}
+    \item Bayes 后验平均：
+    $\hat{\bm{\theta}}_{\textrm{ms}} = 
+    \E_{p(\bm{\theta}|z)}[\theta] 
+    = \bm{\mu}_{\bm{\theta}} + \Cov[\bm{\theta}] \bm{C}^T \Cov[\bm{z}]^{-1}(\bm{z} - \bm{\mu}_z)$
+    估值是$\bm{z}$的线性函数， 所以在这种情况下 Bayes 后验平均也是 MAP 估值 $\hat{\bm{\theta}}_{\textrm{map}}$，
+    也是线性最小均方估值$\hat{\bm{\theta}}_{\textrm{lms}}$。
+    \item 最大似然估值：假定$\theta$ 的先验信息未知，仅利用$\bm{C}$ 和$\Cov[\bm{z}]$ 的信息。
+    $ \hat{\bm{\theta}}_{\textrm{ML}} = (\bm{C}^T \Cov[\bm{n}]^{-1} \bm{C})^{-1} \bm{C}^T \Cov[\bm{n}]^{-1} \bm{z}$
+    \item 最小二乘估值：进一步假定对方差的统计信息也未知，仅利用 $\bm{C}$ 和观测数据，我们有
+    $ \hat{\bm{\theta}}_{\textrm{LS}} = (\bm{C}^T \bm{C})^{-1} \bm{C}^T \bm{z} $    
+\end{enumerate}
+\subsection{估值误差}
+对于上一小节给出的三种估值方法，我们简单分析一下它们各自的理论误差：
+\begin{enumerate}
+    \item 根据线性最小均方估值的理论误差公式：$ \Var[\hat{\bm{\theta}}_{\textrm{lms}}] = $
+    $\Cov[\bm{\theta}] - \Cov[\bm{\theta}]\bm{C}^T \Cov[\bm{z}]^{-1} \bm{C}\Cov[\bm{\theta}]$
+    \item 最大似然法估值的方差矩阵是 $\Var[\hat{\bm{\theta}}_{\textrm{ML}}] = (\bm{C}^T \Cov[\bm{n}]^{-1}\bm{C})^{-1}$
+    \item 最小二乘法的方差矩阵是 $\Var[\hat{\bm{\theta}}_{\textrm{LS}}] = (\bm{C}^T\bm{C})^{-1} \bm{C}^T \Cov[\bm{n}]
+    \bm{C}(\bm{C}^T\bm{C})$
+\end{enumerate}
+理论结果表明：$ \Var[\hat{\bm{\theta}}_{\textrm{lms}}] \leq \Var[\hat{\bm{\theta}}_{\textrm{ML}}] \leq \Var[\hat{\bm{\theta}}_{\textrm{LS}}]$
+
+\subsection{实验}
+我们取参数$\theta$ 和$z$为2维进行实验，探究不同信噪比条件下不同估值方法的理论误差和C-R界的差距。
+$$
+\bm{C} = \begin{bmatrix} 0.5 & 0.5 \\ 0.7 & -0.3\end{bmatrix},
+\Cov[\bm{n}] = \sigma^2 \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix} ,
+\E[\bm{\theta}] =\begin{bmatrix} 1 & 1\end{bmatrix},
+\Cov[\bm{\theta}] = \begin{bmatrix} 0.1 & 0.03 \\ 0.03 & 0.05 \end{bmatrix}
+$$
+利用二维正态分布产生1000个观测，得到三种估值方法的实验结果如表~\ref{tab:er_d}所示。
+\begin{table}[!ht]
+    \centering
+    \caption{离散估值实验结果}\label{tab:er_d}
+    \input{sim_discrete.txt}
+\end{table}
+
+从上表可以看到：
+\begin{enumerate}
+\item 当信噪比较高时，三种估值方法的误差在同一数量级，实验均值接近零；
+\item 当信噪比比较低时，Bayes 后验估值由于利用了先验信息， 估值方差趋近于 $\Cov[\bm{\theta}]=0.15$，估值仍较为准确，
+但其他两种方法虽然理论上是无偏的，但由于方差较大，对于1000次观测无法准确估计$\mu_{\bm{\theta}}$。
+\item $\Var[\hat{\bm{\theta}}_{\textrm{ML}}] = \Var[\hat{\bm{\theta}}_{\textrm{LS}}]$， 这是因为$\bm{C}$是可逆的方阵。
+\end{enumerate}
+
+\section{连续情形下的仿真}
+\subsection{模型}
+设 观测信号 $z(t) = A g(\omega t + \theta) + n(t), 0\leq t \leq T$, $A$ 是未知的非随机参量(信号幅度的估值)，$n(t)$ 是谱密度为 ${N_0 \over 2}$
+的高斯白噪声。采用最大似然法进行估值，有 
+    \begin{equation}\label{eq:A}
+    \hat{A}_{\textrm{ML}} = \frac{\int_0^T z(t)s(t)dt}{\int_0^T s^2(t)dt}
+    \end{equation}
+其中$ s(t) = g(\omega t + \theta) $。
+\subsection{估值误差}
+信号幅度的估值式\eqref{eq:A}是有效估值，方差为 $ N_0 / \left(2 \int_0^T s^2(t)dt \right)$。
+
+\subsection{实验}
+设 $T=[0,2\pi]$。我们分别取正弦波、方波和三角波作为信道的输入信号，待估计的信号幅值为 $A=1.5$。$g(\omega t + \theta)$,周期为$2\pi$,
+$$
+g_{\textrm{sine}}(t) = \sin(t); \,
+g_{\textrm{square}}(t)  = \begin{cases} 1 & 0\leq t< \pi \\ -1 & \pi\leq t < 2\pi \end{cases};\,
+g_{\textrm{sawtooth}}(t) = \frac{t}{\pi} - 1
+$$  
+对信号采用等间隔采样（采样点个数为1000），在每个采样点附加 方差为 $N_0/（2\Delta t）$ 的噪声，其中$\Delta t$ 是采样间隔。
+之所以采用采样间隔修正，是因为计算机不能产生连续域的$\Delta$ 函数， 直接用离散采样的方法，如果每个采样点高斯噪声的方差相同，那么根据
+大数定律$\bm{A}_{\textrm{ML}}$的方差趋近于零，与C-R界非零矛盾。 
+
+仿真实验表明噪声方差取为方差为 $N_0/（2\Delta t）$使得表~\ref{tab:er_c}的结果与观测采样点数无关（实验次数足够多，比如200次）：
+
+\begin{table}[!ht]
+    \centering
+    \caption{连续估值实验结果}\label{tab:er_c}
+\input{sim_continuous.txt}
+\end{table}
+
+从表~\ref{tab:er_c}可以看到：
+\begin{enumerate}
+\item 当信噪比较高时，估值方差较小，实验均值接近零；
+\item 估值方差只和信号能量有关，和信号波形无关，我们通过仿真可以验证这一点。
+\end{enumerate}
+% time is limited, adding \hline to appropriate place at table \ref{tab:er_c} is out of my scope.
+\end{document}
+
